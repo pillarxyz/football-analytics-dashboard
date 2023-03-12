@@ -4,7 +4,6 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 import numpy as np
 from mplsoccer import Pitch, Sbopen, VerticalPitch, FontManager
 import streamlit as st
-import streamlit.components.v1 as components
 from scipy.ndimage import gaussian_filter
 import pandas as pd
 from statsbombpy import sb
