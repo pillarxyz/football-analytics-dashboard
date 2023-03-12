@@ -93,6 +93,10 @@ def calculate_stats(df, team):
     n_shots = df.loc[shot_mask, "outcome_name"].shape[0]
 
     shot_types = df.loc[shot_mask, "outcome_name"].value_counts()
+    if "Goal" not in shot_types.index:
+        shot_types.loc["Goal"] = 0
+    if "Saved" not in shot_types.index:
+        shot_types.loc["Saved"] = 0
     try:
         goals = shot_types.loc["Goal"]
         shot_on_target = shot_types.loc["Goal"] + shot_types.loc["Saved"]
