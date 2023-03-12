@@ -12,3 +12,4 @@ Deployed at [here](https://pillarxyz-football-analytics-morocco-dashboard-4fob7a
 - [ ] Visualizing progressive passes
 - [ ] Keep only events from game normal time, not penalties (penalties will be treated differently)
 - [ ] Add comparative analysis between opposing teams
+- [ ] Add documentation for each visualization and analysis
