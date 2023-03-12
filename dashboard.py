@@ -344,7 +344,7 @@ def plot_passes(df, team, outcome, **kwargs):
 
 
 st.set_page_config(
-    page_title="Analysis of WC 2022 - Morocco", page_icon="ball.png", layout="wide"
+    page_title="Analysis of WC 2022 - Morocco", page_icon="assets/ball.png", layout="wide"
 )
 
 opponent = st.selectbox("Select match", list(match_mapping.keys()))
