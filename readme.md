@@ -10,6 +10,6 @@ Deployed at [here](https://morocco-worldcup2022.streamlit.app/)
 - [ ] Quantifying the impact of substitutions
 - [ ] Calculating expected threat (xT) of passes
 - [ ] Visualizing progressive passes
-- [ ] Keep only events from game normal time, not penalties (penalties will be treated differently)
+- [x] Keep only events from game normal time, not penalties (penalties will be treated differently)
 - [ ] Add comparative analysis between opposing teams
 - [ ] Add documentation for each visualization and analysis

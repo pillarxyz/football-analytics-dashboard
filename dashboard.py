@@ -1,11 +1,14 @@
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from matplotlib.animation import FuncAnimation, PillowWriter
 import numpy as np
 from mplsoccer import Pitch, Sbopen, VerticalPitch, FontManager
 import streamlit as st
+import streamlit.components.v1 as components
 from scipy.ndimage import gaussian_filter
 import pandas as pd
 from statsbombpy import sb
+import os
 
 plt.style.use("ggplot")
 
@@ -33,7 +36,9 @@ match_mapping = morocco_matches.apply(
 match_mapping = {k: v for d in match_mapping for k, v in d.items()}
 
 
-def load_match(match_id, match_mapping):
+
+
+def load_match(match_id):
     parser = Sbopen()
     df, related, freeze, tactics = parser.event(match_id)
     team1, team2 = df.team_name.unique()
@@ -75,7 +80,10 @@ def load_match(match_id, match_mapping):
         }
 
         df["player_name"] = df["player_name"].replace(names)
-
+        
+    if not os.path.exists("data"):
+        os.mkdir("data")
+    df.to_csv(f"data/{match_id}.csv", index=False)
     return df, team1, team2
 
 
@@ -89,7 +97,7 @@ def calculate_stats(df, team):
     pass_completion = round(pass_completion, 2)
     possession = round(possession, 2)
 
-    shot_mask = (df.type_name == "Shot") & (df.team_name == team)
+    shot_mask = (df.type_name == "Shot") & (df.team_name == team) & (df.period != 5)
     n_shots = df.loc[shot_mask, "outcome_name"].shape[0]
 
     shot_types = df.loc[shot_mask, "outcome_name"].value_counts()
@@ -108,11 +116,13 @@ def calculate_stats(df, team):
 
 
 def plot_shots(df, team):
+    df = df.copy()
+    df = df[df["period"] != 5]
     mask = (df.type_name == "Shot") & (df.team_name == team)
-    df = df.loc[mask, ["x", "y", "outcome_name", "player_name"]]
+    df = df.loc[mask, ["x", "y", "outcome_name", "player_name", "shot_statsbomb_xg"]]
     df["player_name"] = df["player_name"].str.split().str[-1]
 
-    pitch = VerticalPitch(line_color="black", half=True)
+    pitch = VerticalPitch(line_color="black", half=True, goal_alpha=0.8)
     fig, ax = pitch.grid(
         grid_height=0.9,
         title_height=0.06,
@@ -124,19 +134,35 @@ def plot_shots(df, team):
 
     for i, row in df.iterrows():
         if row["outcome_name"] == "Goal":
-            pitch.scatter(row.x, row.y, alpha=1, s=500, color="crimson", ax=ax["pitch"])
+            pitch.scatter(
+                row.x,
+                row.y,
+                alpha=min(0.5 + row["shot_statsbomb_xg"], 1),
+                s=300 + row["shot_statsbomb_xg"] * 150,
+                edgecolors='crimson',
+                marker='football',
+                ax=ax["pitch"],
+            )
             pitch.annotate(
                 row["player_name"], (row.x + 1, row.y - 2), ax=ax["pitch"], fontsize=12
             )
         else:
             pitch.scatter(
-                row.x, row.y, alpha=0.2, s=500, color="crimson", ax=ax["pitch"]
+                row.x,
+                row.y,
+                alpha=min(0.3 + row["shot_statsbomb_xg"], 1),
+                s=250 + row["shot_statsbomb_xg"] * 150,
+                color="crimson",
+                ax=ax["pitch"],
             )
+
     fig.suptitle(f"{team} shots", fontsize=24)
     return fig
 
 
 def plot_xg_chart(df, team):
+    df = df.copy()
+    df = df[df["period"] != 5]
     df_shots = df.loc[
         (df.type_name == "Shot"),
         [
@@ -347,25 +373,33 @@ def plot_passes(df, team, outcome, **kwargs):
     return fig
 
 
+def visualize_tactical_formation(df, team):
+    pass
+    
+
 st.set_page_config(
     page_title="Analysis of WC 2022 - Morocco", page_icon="assets/ball.png", layout="wide"
 )
 
 opponent = st.selectbox("Select match", list(match_mapping.keys()))
 match_id = match_mapping[opponent]
-df, team1, team2 = load_match(match_id, match_mapping)
+df, team1, team2 = load_match(match_id)
 st.title(f"Analysis of WC 2022 - Morocco vs {opponent}")
 
 
 team = st.selectbox("Select team", df["team_name"].unique())
 st.subheader("Team stats")
 possession, pass_completion, n_shots, shot_on_target, goals = calculate_stats(df, team)
+
+#st.pyplot(visualize_tactical_formation(df, team))
+
 cols = st.columns(5)
 cols[0].metric("Possession", possession)
 cols[1].metric("Pass completion", pass_completion)
 cols[2].metric("Shots", n_shots)
 cols[3].metric("Shots on target", shot_on_target)
 cols[4].metric("Goals", goals)
+
 
 fig1 = plot_shots(df, team)
 fig2 = plot_xg_chart(df, team)
