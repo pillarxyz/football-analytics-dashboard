@@ -35,8 +35,6 @@ match_mapping = morocco_matches.apply(
 match_mapping = {k: v for d in match_mapping for k, v in d.items()}
 
 
-
-
 def load_match(match_id):
     parser = Sbopen()
     df, related, freeze, tactics = parser.event(match_id)
@@ -79,14 +77,20 @@ def load_match(match_id):
         }
 
         df["player_name"] = df["player_name"].replace(names)
-        
+
     if not os.path.exists("data"):
         os.mkdir("data")
     df.to_csv(f"data/{match_id}.csv", index=False)
     return df, team1, team2
 
 
-def calculate_stats(df, team):
+def calculate_stats(df, team, timeframe):
+
+    if timeframe == (0, 0):
+        df = df.copy()
+    else:
+        df = df[(df["minute"] >= timeframe[0]) & (df["minute"] <= timeframe[1])].copy()
+
     pass_mask = (df.type_name == "Pass") & (df.team_name == team)
     pass_completion = (
         df.loc[pass_mask, "outcome_name"].value_counts(normalize=True).loc["Complete"]
@@ -114,8 +118,13 @@ def calculate_stats(df, team):
     return possession, pass_completion, n_shots, shot_on_target, goals
 
 
-def plot_shots(df, team):
-    df = df.copy()
+def plot_shots(df, team, timeframe):
+
+    if timeframe == (0, 0):
+        df = df.copy()
+    else:
+        df = df[(df["minute"] >= timeframe[0]) & (df["minute"] <= timeframe[1])].copy()
+
     df = df[df["period"] != 5]
     mask = (df.type_name == "Shot") & (df.team_name == team)
     df = df.loc[mask, ["x", "y", "outcome_name", "player_name", "shot_statsbomb_xg"]]
@@ -138,8 +147,8 @@ def plot_shots(df, team):
                 row.y,
                 alpha=min(0.5 + row["shot_statsbomb_xg"], 1),
                 s=300 + row["shot_statsbomb_xg"] * 150,
-                edgecolors='crimson',
-                marker='football',
+                edgecolors="crimson",
+                marker="football",
                 ax=ax["pitch"],
             )
             pitch.annotate(
@@ -159,8 +168,13 @@ def plot_shots(df, team):
     return fig
 
 
-def plot_xg_chart(df, team):
-    df = df.copy()
+def plot_xg_chart(df, team, timeframe):
+
+    if timeframe == (0, 0):
+        df = df.copy()
+    else:
+        df = df[(df["minute"] >= timeframe[0]) & (df["minute"] <= timeframe[1])].copy()
+
     df = df[df["period"] != 5]
     df_shots = df.loc[
         (df.type_name == "Shot"),
@@ -191,7 +205,7 @@ def plot_xg_chart(df, team):
     ax.set_ylabel("xG")
     ax.set_title("xG flow chart")
     ax.grid(False)
-    plt.xticks(np.arange(0, 95, 5))
+    plt.xticks(np.arange(timeframe[0], timeframe[1], 5))
 
     team_df = df_shots.loc[df_shots["team_name"] == team].copy()
     team_df = team_df.sort_values("time")
@@ -212,12 +226,22 @@ def plot_xg_chart(df, team):
     return fig
 
 
-def plot_pass_network(df, team):
-    sub = (
-        df.loc[df["type_name"] == "Substitution"]
-        .loc[df["team_name"] == team]
-        .iloc[0]["index"]
-    )
+def plot_pass_network(df, team, timeframe):
+
+    if timeframe == (0, 0):
+        df = df.copy()
+    else:
+        df = df[(df["minute"] >= timeframe[0]) & (df["minute"] <= timeframe[1])].copy()
+
+    try:
+        sub = (
+            df.loc[df["type_name"] == "Substitution"]
+            .loc[df["team_name"] == team]
+            .iloc[0]["index"]
+        )
+    except IndexError:
+        sub = df.index.max()
+
     mask = (
         (df.type_name == "Pass")
         & (df.team_name == team)
@@ -322,7 +346,13 @@ def plot_pass_network(df, team):
     return fig
 
 
-def plot_passes(df, team, outcome, **kwargs):
+def plot_passes(df, team, outcome, timeframe, **kwargs):
+
+    if timeframe == (0, 0):
+        df = df.copy()
+    else:
+        df = df[(df["minute"] >= timeframe[0]) & (df["minute"] <= timeframe[1])].copy()
+
     mask = (df.type_name == "Pass") & (df.team_name == team)
     passes = df.loc[mask, ["x", "y", "end_x", "end_y", "outcome_name"]]
     passes = passes.loc[passes["outcome_name"] == outcome]
@@ -343,7 +373,6 @@ def plot_passes(df, team, outcome, **kwargs):
     )
 
     if show_heatmap:
-        robotto_regular = FontManager()
 
         passmap = pitch.bin_statistic(
             passes.end_x, passes.end_y, statistic="count", bins=(30, 30), normalize=True
@@ -374,10 +403,12 @@ def plot_passes(df, team, outcome, **kwargs):
 
 def visualize_tactical_formation(df, team):
     pass
-    
+
 
 st.set_page_config(
-    page_title="Analysis of WC 2022 - Morocco", page_icon="assets/ball.png", layout="wide"
+    page_title="Analysis of WC 2022 - Morocco",
+    page_icon="assets/ball.png",
+    layout="wide",
 )
 
 opponent = st.selectbox("Select match", list(match_mapping.keys()))
@@ -387,10 +418,21 @@ st.title(f"Analysis of WC 2022 - Morocco vs {opponent}")
 
 
 team = st.selectbox("Select team", df["team_name"].unique())
-st.subheader("Team stats")
-possession, pass_completion, n_shots, shot_on_target, goals = calculate_stats(df, team)
 
-#st.pyplot(visualize_tactical_formation(df, team))
+max_match_time = df.loc[df["period"] < 3]["minute"].max()
+time = st.slider(
+    "Select minute",
+    0,
+    max_match_time,
+    (0, max_match_time),
+    1,
+)
+st.subheader("Team stats")
+possession, pass_completion, n_shots, shot_on_target, goals = calculate_stats(
+    df, team, time
+)
+
+# st.pyplot(visualize_tactical_formation(df, team))
 
 cols = st.columns(5)
 cols[0].metric("Possession", possession)
@@ -400,8 +442,8 @@ cols[3].metric("Shots on target", shot_on_target)
 cols[4].metric("Goals", goals)
 
 
-fig1 = plot_shots(df, team)
-fig2 = plot_xg_chart(df, team)
+fig1 = plot_shots(df, team, time)
+fig2 = plot_xg_chart(df, team, time)
 col1, col2 = st.columns(2)
 col1.pyplot(fig1)
 col2.pyplot(fig2)
@@ -412,9 +454,9 @@ outcome = st.selectbox(
 show_passes = st.checkbox("Show passing map")
 show_heatmap = st.checkbox("Show heatmap", value=True)
 fig3 = plot_passes(
-    df, team, outcome, show_passes=show_passes, show_heatmap=show_heatmap
+    df, team, outcome, time, show_passes=show_passes, show_heatmap=show_heatmap
 )
-fig4 = plot_pass_network(df, team)
+fig4 = plot_pass_network(df, team, time)
 col3, col4 = st.columns(2)
 col3.pyplot(fig3)
 col4.pyplot(fig4)
