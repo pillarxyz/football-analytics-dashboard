@@ -2,7 +2,7 @@
 
 Dashboards for visualizing Morocco's 2022 World Cup Run using event data from each of their matches, though this can be extended to any match in any competition.
 
-Deployed at [here](https://pillarxyz-football-analytics-morocco-dashboard-4fob7a.streamlit.app/)
+Deployed at [here](https://morocco-worldcup2022.streamlit.app/)
 
 # TODO
 
