@@ -1,8 +1,6 @@
 import matplotlib.pyplot as plt
-import matplotlib as mpl
-from matplotlib.animation import FuncAnimation, PillowWriter
 import numpy as np
-from mplsoccer import Pitch, Sbopen, VerticalPitch, FontManager
+from mplsoccer import Pitch, Sbopen, VerticalPitch
 import streamlit as st
 from scipy.ndimage import gaussian_filter
 import pandas as pd
@@ -379,7 +377,7 @@ def plot_passes(df, team, outcome, timeframe, **kwargs):
         )
         passmap["statistic"] = gaussian_filter(passmap["statistic"], 1)
 
-        pcm = pitch.heatmap(
+        pitch.heatmap(
             passmap, ax=ax["pitch"], cmap="plasma", edgecolors="#22312b"
         )
 
