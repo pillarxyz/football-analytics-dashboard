@@ -402,7 +402,15 @@ def plot_passes(df, team, outcome, timeframe, **kwargs):
 
 
 def visualize_tactical_formation(df, team):
-    pass
+    df = df.copy()
+    mask = (df.team_name == team) & (
+        df.type_name.isin(["Starting XI", "Tactical Shift"])
+    )
+    tactical_changes = df[
+        mask, ["tactics_formation", "minute", "second"]
+    ].drop_duplicates(subset=["tactics_formation"], keep="first")
+
+    return tactical_changes
 
 
 st.set_page_config(
@@ -419,12 +427,12 @@ st.title(f"Analysis of WC 2022 - Morocco vs {opponent}")
 
 team = st.selectbox("Select team", df["team_name"].unique())
 
-max_match_time = df.loc[df["period"] < 3]["minute"].max()
+max_match_time = df.loc[df["period"] < 3, "minute"].max()
 time = st.slider(
     "Select minute",
     0,
-    max_match_time,
-    (0, max_match_time),
+    int(max_match_time),
+    (0, int(max_match_time)),
     1,
 )
 st.subheader("Team stats")
