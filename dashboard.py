@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 import numpy as np
 from mplsoccer import Pitch, Sbopen, VerticalPitch
 import streamlit as st
@@ -144,7 +145,7 @@ def plot_shots(df, team, timeframe):
                 row.x,
                 row.y,
                 alpha=min(0.5 + row["shot_statsbomb_xg"], 1),
-                s=300 + row["shot_statsbomb_xg"] * 150,
+                s=250 + row["shot_statsbomb_xg"] * 500,
                 edgecolors="crimson",
                 marker="football",
                 ax=ax["pitch"],
@@ -153,15 +154,38 @@ def plot_shots(df, team, timeframe):
                 row["player_name"], (row.x + 1, row.y - 2), ax=ax["pitch"], fontsize=12
             )
         else:
+            color_map = {
+                "Saved": "chocolate",
+                "Saved Off Target": "chocolate",
+                "Saved to Post": "chocolate",
+                "Off T": "black",
+                "Blocked": "brown",
+                "Post": "gray",
+                "Wayward": "burlywood",
+            }
             pitch.scatter(
                 row.x,
                 row.y,
-                alpha=min(0.3 + row["shot_statsbomb_xg"], 1),
-                s=250 + row["shot_statsbomb_xg"] * 150,
-                color="crimson",
+                s=250 + row["shot_statsbomb_xg"] * 500,
+                color=color_map[row["outcome_name"]],
                 ax=ax["pitch"],
             )
 
+    # add legend of color_map
+    legend_elements = [
+        Patch(facecolor=color_map["Saved"], label="Saved"),
+        Patch(facecolor=color_map["Off T"], label="Off Target"),
+        Patch(facecolor=color_map["Blocked"], label="Blocked"),
+        Patch(facecolor=color_map["Post"], label="Post"),
+        Patch(facecolor=color_map["Wayward"], label="Wayward"),
+    ]
+    ax["pitch"].legend(
+        handles=legend_elements,
+        loc="lower left",
+        bbox_to_anchor=(0.05, 0.05),
+        ncol=2,
+        fontsize=12,
+    )
     fig.suptitle(f"{team} shots", fontsize=24)
     return fig
 
