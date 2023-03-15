@@ -25,6 +25,30 @@ morocco_matches.loc[
 ] = "Croatia 3rd Place Play-off"
 
 
+position_coordinates = {
+    "Goalkeeper": (2, 40),
+    "Right Back": (25, 5),
+    "Right Center Back": (20, 30),
+    "Left Center Back": (20, 50),
+    "Left Back": (25, 75),
+    "Center Defensive Midfield": (35, 40),
+    "Right Midfield": (55, 5),
+    "Right Center Midfield": (50, 25),
+    "Left Center Midfield": (50, 55),
+    "Left Midfield": (55, 75),
+    "Center Forward": (80, 40),
+    "Right Center Forward": (80, 35),
+    "Left Center Forward": (80, 45),
+    "Right Wing": (75, 10),
+    "Left Wing": (75, 75),
+    "Right Defensive Midfield": (40, 30),
+    "Left Defensive Midfield": (40, 50),
+    "Center Attacking Midfield": (65, 40),
+    "Center Back": (20, 40),
+    "Right Wing Back": (35, 10),
+    "Left Wing Back": (35, 70),
+}
+
 match_mapping = morocco_matches.apply(
     lambda x: {x["home_team"]: x["match_id"]}
     if x["away_team"] == "Morocco"
@@ -51,36 +75,10 @@ def load_match(match_id):
         suffixes=("", "_recipient"),
     )
 
-    df["player_name"] = df["player_name"].replace(
-        {"Achraf Hakimi Mouh": "Achraf Hakimi"}
-    )
-
-    if team1 == "Portugal" or team2 == "Portugal":
-        # Portuguese people have long names lol
-        names = {
-            "Kléper Laveran Lima Ferreira": "Pepe",
-            "João Félix Sequeira": "João Félix",
-            "Raphaël Adelino José Guerreiro": "Raphaël Guerreiro",
-            "Rúben Santos Gato Alves Dias": "Rúben Dias",
-            "Bruno Miguel Borges Fernandes": "Bruno Fernandes",
-            "Bernardo Mota Veiga de Carvalho e Silva": "Bernardo Silva",
-            "Gonçalo Matias Ramos": "Gonçalo Ramos",
-            "Cristiano Ronaldo dos Santos Aveiro": "Cristiano Ronaldo",
-            "Otávio Edmilson da Silva Monteiro": "Otávio",
-            "José Diogo Dalot Teixeira": "Diogo Dalot",
-            "Diogo Meireles Costa": "Diogo Costa",
-            "João Pedro Cavaco Cancelo": "João Cancelo",
-            "Vitor Machado Ferreira": "Vitinha",
-            "Rafael Alexandre Conceição Leão": "Rafael Leão",
-            "Ricardo Jorge Luz Horta": "Ricardo Horta",
-        }
-
-        df["player_name"] = df["player_name"].replace(names)
-
     if not os.path.exists("data"):
         os.mkdir("data")
     df.to_csv(f"data/{match_id}.csv", index=False)
-    return df, team1, team2
+    return df, team1, team2, tactics
 
 
 def calculate_stats(df, team, timeframe):
@@ -401,9 +399,7 @@ def plot_passes(df, team, outcome, timeframe, **kwargs):
         )
         passmap["statistic"] = gaussian_filter(passmap["statistic"], 1)
 
-        pitch.heatmap(
-            passmap, ax=ax["pitch"], cmap="plasma", edgecolors="#22312b"
-        )
+        pitch.heatmap(passmap, ax=ax["pitch"], cmap="plasma", edgecolors="#22312b")
 
     if show_passes:
         pitch.arrows(
@@ -423,16 +419,30 @@ def plot_passes(df, team, outcome, timeframe, **kwargs):
     return fig
 
 
-def visualize_tactical_formation(df, team):
-    df = df.copy()
-    mask = (df.team_name == team) & (
-        df.type_name.isin(["Starting XI", "Tactical Shift"])
-    )
-    tactical_changes = df[
-        mask, ["tactics_formation", "minute", "second"]
-    ].drop_duplicates(subset=["tactics_formation"], keep="first")
+def visualize_tactical_formation(df, tactics, team, shift_id=None):
 
-    return tactical_changes
+    pos = tactics.loc[tactics["id"] == shift_id].copy()
+
+    pitch = Pitch(line_color="black")
+    fig, ax = pitch.draw(figsize=(16, 11))
+
+    for i, row in pos.iterrows():
+        x, y = position_coordinates[row["position_name"]]
+        pitch.scatter(
+            [x], [y], ax=ax, s=700, color="black", edgecolor="white", zorder=3
+        )
+        ax.text(
+            x,
+            y,
+            row["jersey_number"],
+            ha="center",
+            va="center",
+            color="white",
+            fontsize=20,
+            zorder=4,
+        )
+
+    return fig
 
 
 st.set_page_config(
@@ -443,12 +453,11 @@ st.set_page_config(
 
 opponent = st.selectbox("Select match", list(match_mapping.keys()))
 match_id = match_mapping[opponent]
-df, team1, team2 = load_match(match_id)
+df, team1, team2, tactics = load_match(match_id)
 st.title(f"Analysis of WC 2022 - Morocco vs {opponent}")
 
 
 team = st.selectbox("Select team", df["team_name"].unique())
-
 max_match_time = df.loc[df["period"] < 3, "minute"].max()
 time = st.slider(
     "Select minute",
@@ -457,6 +466,13 @@ time = st.slider(
     (0, int(max_match_time)),
     1,
 )
+tactical_changes = df.loc[
+    (df["type_name"].isin(["Tactical Shift", "Starting XI"]))
+    & (df["team_name"] == team)
+    & (df["minute"] >= time[0])
+    & (df["minute"] < time[1]),
+    ["id", "minute", "tactics_formation"],
+]
 st.subheader("Team stats")
 possession, pass_completion, n_shots, shot_on_target, goals = calculate_stats(
     df, team, time
@@ -471,7 +487,77 @@ cols[2].metric("Shots", n_shots)
 cols[3].metric("Shots on target", shot_on_target)
 cols[4].metric("Goals", goals)
 
+st.subheader("Lineup and Tactics")
+change_id = st.radio(
+    "Select tactical change",
+    tactical_changes["id"].unique(),
+    format_func=lambda x: f"{tactical_changes.loc[tactical_changes['id'] == x, 'minute'].values[0]} min",
+    horizontal=True,
+)
+starting_lineup = tactics.loc[
+    tactics["id"] == tactical_changes["id"].unique()[0],
+    ["jersey_number", "player_name", "position_name"],
+]
+starting_lineup = starting_lineup.rename(
+    columns={
+        "jersey_number": "Jersey number",
+        "player_name": "Player",
+        "position_name": "Position",
+    }
+)
 
+
+def color_substitutions(s):
+    if "(Subbed out)" in s["Position"]:
+        return ["background-color: crimson"] * len(s)
+    elif "(Subbed in)" in s["Position"]:
+        return ["background-color: green"] * len(s)
+    else:
+        return [""] * len(s)
+
+
+if change_id != tactical_changes["id"].unique()[0]:
+    lineup = tactics.loc[
+        tactics["id"] == change_id, ["jersey_number", "player_name", "position_name"]
+    ]
+    lineup = lineup.rename(
+        columns={
+            "jersey_number": "Jersey number",
+            "player_name": "Player",
+            "position_name": "Position",
+        }
+    )
+    starting_lineup.loc[
+        ~starting_lineup["Jersey number"].isin(lineup["Jersey number"].unique()),
+        "Position",
+    ] += f" (Subbed out)"
+    lineup.loc[
+        ~lineup["Jersey number"].isin(starting_lineup["Jersey number"].unique()),
+        "Position",
+    ] += f" (Subbed in)"
+    starting_lineup = pd.concat(
+        [
+            starting_lineup,
+            lineup.loc[
+                ~lineup["Jersey number"].isin(starting_lineup["Jersey number"].unique())
+            ],
+        ]
+    )
+lineup = starting_lineup.copy()
+
+hide_table_row_index = """
+            <style>
+            thead tr th:first-child {display:none}
+            tbody th {display:none}
+            </style>
+            """
+fig0 = visualize_tactical_formation(df, tactics, team, change_id)
+col1, col2 = st.columns(2)
+st.markdown(hide_table_row_index, unsafe_allow_html=True)
+col1.table(lineup.style.apply(color_substitutions, axis=1))
+col2.pyplot(fig0)
+
+st.subheader("Shots and Passes")
 fig1 = plot_shots(df, team, time)
 fig2 = plot_xg_chart(df, team, time)
 col1, col2 = st.columns(2)
