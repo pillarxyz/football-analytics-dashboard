@@ -11,10 +11,10 @@ Deployed [here](https://morocco-worldcup2022.streamlit.app/)
 - [x] Add slider to select the time interval to visualize
 - [x] Keep only events from game normal time, not penalties (penalties will be treated differently)
 - [ ] [Add a button to toggle between the two modes (normal time vs. penalties, only available for matches with penalties)](https://github.com/pillarxyz/football-analytics-morocco/issues/1)
-- [ ] [Mark the different types of shots (on target, off target, blocked, saved, etc.) in the shot map](https://github.com/pillarxyz/football-analytics-morocco/issues/2)
+- [x] [Mark the different types of shots (on target, off target, blocked, saved, etc.) in the shot map](https://github.com/pillarxyz/football-analytics-morocco/issues/2)
 
 ## Analytical Aspects
-- [ ] [Visualizing changes of tactics](https://github.com/pillarxyz/football-analytics-morocco/issues/3)
+- [x] [Visualizing changes of tactics](https://github.com/pillarxyz/football-analytics-morocco/issues/3)
 - [ ] [Quantifying the impact of substitutions](https://github.com/pillarxyz/football-analytics-morocco/issues/4)
 - [ ] [Calculating expected threat (xT) of passes](https://github.com/pillarxyz/football-analytics-morocco/issues/5)
 - [ ] [Visualizing progressive passes](https://github.com/pillarxyz/football-analytics-morocco/issues/6)
