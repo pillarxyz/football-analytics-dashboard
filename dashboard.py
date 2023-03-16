@@ -119,6 +119,17 @@ def calculate_stats(df, team, timeframe):
 
 def plot_shots(df, team, timeframe):
 
+    color_map = {
+                "Saved": "chocolate",
+                "Saved Off Target": "chocolate",
+                "Saved to Post": "chocolate",
+                "Off T": "black",
+                "Blocked": "brown",
+                "Post": "gray",
+                "Wayward": "burlywood",
+            }
+    
+
     if timeframe == (0, 0):
         df = df.copy()
     else:
@@ -154,15 +165,6 @@ def plot_shots(df, team, timeframe):
                 row["player_name"], (row.x + 1, row.y - 2), ax=ax["pitch"], fontsize=12
             )
         else:
-            color_map = {
-                "Saved": "chocolate",
-                "Saved Off Target": "chocolate",
-                "Saved to Post": "chocolate",
-                "Off T": "black",
-                "Blocked": "brown",
-                "Post": "gray",
-                "Wayward": "burlywood",
-            }
             pitch.scatter(
                 row.x,
                 row.y,
@@ -171,7 +173,6 @@ def plot_shots(df, team, timeframe):
                 ax=ax["pitch"],
             )
 
-    # add legend of color_map
     legend_elements = [
         Patch(facecolor=color_map["Saved"], label="Saved"),
         Patch(facecolor=color_map["Off T"], label="Off Target"),
@@ -255,19 +256,11 @@ def plot_pass_network(df, team, timeframe):
     else:
         df = df[(df["minute"] >= timeframe[0]) & (df["minute"] <= timeframe[1])].copy()
 
-    try:
-        sub = (
-            df.loc[df["type_name"] == "Substitution"]
-            .loc[df["team_name"] == team]
-            .iloc[0]["index"]
-        )
-    except IndexError:
-        sub = df.index.max()
-
     mask = (
         (df.type_name == "Pass")
         & (df.team_name == team)
-        & (df.index < sub)
+        & (df.minute < timeframe[1])
+        & (df.minute > timeframe[0])
         & (df.outcome_name == "Complete")
         & (df.sub_type_name != "Throw-in")
     )
@@ -494,6 +487,9 @@ change_id = st.radio(
     format_func=lambda x: f"{tactical_changes.loc[tactical_changes['id'] == x, 'minute'].values[0]} min",
     horizontal=True,
 )
+
+# TODO: handle if the range slider is set to a time where no tactical changes have been made
+
 starting_lineup = tactics.loc[
     tactics["id"] == tactical_changes["id"].unique()[0],
     ["jersey_number", "player_name", "position_name"],
