@@ -27,26 +27,28 @@ morocco_matches.loc[
 
 position_coordinates = {
     "Goalkeeper": (2, 40),
-    "Right Back": (25, 5),
-    "Right Center Back": (20, 30),
-    "Left Center Back": (20, 50),
-    "Left Back": (25, 75),
+    "Right Back": (25, 75),
+    "Right Center Back": (20, 50),
+    "Left Center Back": (20, 30),
+    "Left Back": (25, 5),
+    "Left Center Midfield": (50, 25),
+    "Right Center Midfield": (50, 55),
+    "Left Midfield": (55, 5),
+    "Right Midfield": (55, 75),
+    "Right Center Forward": (80, 45),
+    "Left Center Forward": (80, 35),
+    "Right Wing": (75, 75),
+    "Left Wing": (75, 10),
+    "Right Defensive Midfield": (40, 50),
+    "Left Defensive Midfield": (40, 30),
+    "Right Wing Back": (35, 70),
+    "Left Wing Back": (35, 10),
     "Center Defensive Midfield": (35, 40),
-    "Right Midfield": (55, 5),
-    "Right Center Midfield": (50, 25),
-    "Left Center Midfield": (50, 55),
-    "Left Midfield": (55, 75),
     "Center Forward": (80, 40),
-    "Right Center Forward": (80, 35),
-    "Left Center Forward": (80, 45),
-    "Right Wing": (75, 10),
-    "Left Wing": (75, 75),
-    "Right Defensive Midfield": (40, 30),
-    "Left Defensive Midfield": (40, 50),
     "Center Attacking Midfield": (65, 40),
     "Center Back": (20, 40),
-    "Right Wing Back": (35, 10),
-    "Left Wing Back": (35, 70),
+    
+    
 }
 
 match_mapping = morocco_matches.apply(
@@ -57,7 +59,7 @@ match_mapping = morocco_matches.apply(
 )
 match_mapping = {k: v for d in match_mapping for k, v in d.items()}
 
-
+@st.cache_data
 def load_match(match_id):
     parser = Sbopen()
     df, related, freeze, tactics = parser.event(match_id)
@@ -80,7 +82,7 @@ def load_match(match_id):
     df.to_csv(f"data/{match_id}.csv", index=False)
     return df, team1, team2, tactics
 
-
+@st.cache_data
 def calculate_stats(df, team, timeframe):
 
     if timeframe == (0, 0):
@@ -477,8 +479,6 @@ st.subheader("Team stats")
 possession, pass_completion, n_shots, shot_on_target, goals = calculate_stats(
     df, team, time
 )
-
-# st.pyplot(visualize_tactical_formation(df, team))
 
 cols = st.columns(5)
 cols[0].metric("Possession", possession)
